@@ -38,6 +38,10 @@ const verifyMail = asyncHandler(async (req, res) => {
     if (existedUser) {
       throw new ApiError(409, "User with email/username already exists");
     }
+
+    // delete all previous otp
+    await Otp.deleteMany({ email });
+
     await Otp.create({ email, otp });
 
     // Send OTP email using utility function
