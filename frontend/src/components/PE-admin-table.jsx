@@ -8,9 +8,9 @@ const PEAdminTable = () => {
   const [batch, setBatch] = useState('');
 
   useEffect(() => {
-    const fetchPeCourses = async (batchParam = '') => {
+    const fetchPeCourses = async () => {
       try {
-        const url = batchParam ? `/api/v1/pe/get-all?batch=${batchParam}` : '/api/v1/pe/get-all';
+        const url = batch ? `/api/v1/pe/get-all?batch=${batch}` : '/api/v1/pe/get-all';
         const response = await axios.get(url);
         if (response.data && response.data.data) {
           processStudentData(response.data.data);
@@ -20,23 +20,7 @@ const PEAdminTable = () => {
       }
     };
 
-    fetchPeCourses(batch);
-  }, []);
-
-  useEffect(() => {
-    // refetch when batch changes
-    const fetchOnBatchChange = async () => {
-      try {
-        const url = batch ? `/api/v1/pe/get-all?batch=${batch}` : '/api/v1/pe/get-all';
-        const response = await axios.get(url);
-        if (response.data && response.data.data) {
-          processStudentData(response.data.data);
-        }
-      } catch (error) {
-        console.error('Error fetching PE courses on batch change:', error);
-      }
-    };
-    fetchOnBatchChange();
+    fetchPeCourses();
   }, [batch]);
 
   const processStudentData = (courses) => {

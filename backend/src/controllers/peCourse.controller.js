@@ -93,17 +93,60 @@ export const addPeCourse = async (req, res) => {
 export const getAdminPeCourses = asyncHandler(async (req, res) => {
   try {
     const { batch } = req.query;
-    const query = {};
+    const query = { peCourses: { $exists: true, $ne: [] } }; // Only users with PE courses
     if (batch) query.batch = Number(batch);
 
-    const courses = await PeCourse.find(query).populate(
-      'students',
-      'fullName rollNumber branch section batch'
-    );
+    // Fetch users who have enrolled in PE courses
+    const users = await User.find(query)
+      .populate('peCourses')
+      .select('fullName rollNumber branch section batch peCourses');
 
-    if (!courses || courses.length === 0) {
-      return res.status(404).json(new ApiResponse(404, [], 'No PE courses found.'));
+    if (!users || users.length === 0) {
+      return res.status(200).json(new ApiResponse(200, [], 'No students have selected PE courses yet.'));
     }
+
+    // Transform the data to match the frontend's expected structure
+    const transformedData = [];
+    
+    users.forEach(user => {
+      if (user.peCourses && user.peCourses.length > 0) {
+        user.peCourses.forEach(course => {
+          transformedData.push({
+            courseCode: course.courseCode,
+            courseName: course.courseName,
+            type: course.type,
+            batch: course.batch,
+            branch: course.branch,
+            students: [{
+              fullName: user.fullName,
+              rollNumber: user.rollNumber,
+              branch: user.branch,
+              section: user.section,
+              batch: user.batch
+            }]
+          });
+        });
+      }
+    });
+
+    // Group by courseCode to aggregate students
+    const coursesMap = {};
+    transformedData.forEach(item => {
+      const key = `${item.courseCode}-${item.type}`;
+      if (!coursesMap[key]) {
+        coursesMap[key] = {
+          courseCode: item.courseCode,
+          courseName: item.courseName,
+          type: item.type,
+          batch: item.batch,
+          branch: item.branch,
+          students: []
+        };
+      }
+      coursesMap[key].students.push(...item.students);
+    });
+
+    const courses = Object.values(coursesMap);
 
     return res.status(200).json(
       new ApiResponse(200, courses, 'All PE course data with students fetched successfully.')
