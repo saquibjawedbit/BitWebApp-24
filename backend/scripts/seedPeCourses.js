@@ -311,7 +311,6 @@ const peCourses = [
 const seedPeCourses = async () => {
   try {
     await connectDB();
-
     // Clear existing PE courses
     console.log('Clearing existing PE courses...');
     await PeCourse.deleteMany({});
