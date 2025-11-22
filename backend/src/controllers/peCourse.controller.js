@@ -7,15 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 export const addPeCourse = async (req, res) => {
   try {
 
-    const { peCourseIVId, peCourseVId } = req.body;
-
-    if (!peCourseIVId || !peCourseVId) {
-      return res.status(400).json({ success: false, message: 'Missing PE course information.' });
-    }
-
-    if (peCourseIVId.toString() === peCourseVId.toString()) {
-      return res.status(400).json({ success: false, message: 'Please select two different PE courses.' });
-    }
+    const { peCourseIIIId, peCourseIVId, peCourseVId } = req.body;
 
     const userId = req.user._id;
 
@@ -33,23 +25,61 @@ export const addPeCourse = async (req, res) => {
       return res.status(400).json({ success: false, message: 'You can only select PE courses for your own batch.' });
     }
 
-    const course1 = await PeCourse.findOne({ courseCode: peCourseIVId.toString(), batch: batchToUse });
-    const course2 = await PeCourse.findOne({ courseCode: peCourseVId.toString(), batch: batchToUse });
+    // Determine which PE courses to add based on batch
+    let coursesToAdd = [];
+    let courseIds = [];
 
-    // console.log(course1, course2)
-    // console.log(peCourseVId)
+    if (batchToUse === 2023) {
+      // Batch 2023 needs PE3, PE4, PE5
+      if (!peCourseIIIId || !peCourseIVId || !peCourseVId) {
+        return res.status(400).json({ success: false, message: 'Missing PE course information. Please select PE III, PE IV, and PE V courses.' });
+      }
 
+      // Check if all three courses are different
+      if (peCourseIIIId === peCourseIVId || peCourseIIIId === peCourseVId || peCourseIVId === peCourseVId) {
+        return res.status(400).json({ success: false, message: 'Please select three different PE courses.' });
+      }
 
-    if (!course1 || !course2) {
-      return res.status(404).json({ success: false, message: 'PE Course not found for the specified batch!' });
+      const course1 = await PeCourse.findOne({ courseCode: peCourseIIIId.toString(), batch: batchToUse });
+      const course2 = await PeCourse.findOne({ courseCode: peCourseIVId.toString(), batch: batchToUse });
+      const course3 = await PeCourse.findOne({ courseCode: peCourseVId.toString(), batch: batchToUse });
+
+      if (!course1 || !course2 || !course3) {
+        return res.status(404).json({ success: false, message: 'PE Course not found for the specified batch!' });
+      }
+
+      if (user.branch !== course1.branch || user.branch !== course2.branch || user.branch !== course3.branch) {
+        return res.status(400).json({ success: false, message: 'You cannot select a PE course from a different branch.' });
+      }
+
+      coursesToAdd = [course1, course2, course3];
+      courseIds = [course1._id, course2._id, course3._id];
+    } else {
+      // Batch 2022 and others need PE4, PE5
+      if (!peCourseIVId || !peCourseVId) {
+        return res.status(400).json({ success: false, message: 'Missing PE course information.' });
+      }
+
+      if (peCourseIVId.toString() === peCourseVId.toString()) {
+        return res.status(400).json({ success: false, message: 'Please select two different PE courses.' });
+      }
+
+      const course1 = await PeCourse.findOne({ courseCode: peCourseIVId.toString(), batch: batchToUse });
+      const course2 = await PeCourse.findOne({ courseCode: peCourseVId.toString(), batch: batchToUse });
+
+      if (!course1 || !course2) {
+        return res.status(404).json({ success: false, message: 'PE Course not found for the specified batch!' });
+      }
+
+      if (user.branch !== course1.branch || user.branch !== course2.branch) {
+        return res.status(400).json({ success: false, message: 'You cannot select a PE course from a different branch.' });
+      }
+
+      coursesToAdd = [course1, course2];
+      courseIds = [course1._id, course2._id];
     }
 
     console.log('User PE Courses:', user.peCourses);
-
-    console.log(course1.branch)
-    if (user.branch !== course1.branch || user.branch !== course2.branch) {
-      return res.status(400).json({ success: false, message: 'You cannot select a PE course from a different branch.' });
-    }
 
     // Added Section for 
     const validSections = ['A', 'B', 'C', 'D'];
@@ -58,8 +88,7 @@ export const addPeCourse = async (req, res) => {
     }
 
     const isStudentAlreadyEnrolled = user.peCourses.some(enrolledCourse => 
-      enrolledCourse.toString() === course1._id.toString() ||
-      enrolledCourse.toString() === course2._id.toString()
+      courseIds.some(courseId => enrolledCourse.toString() === courseId.toString())
     );
 
     console.log("Student Enrolled? ", isStudentAlreadyEnrolled);
@@ -68,16 +97,14 @@ export const addPeCourse = async (req, res) => {
       return res.status(400).json({ success: false, message: 'You have already selected a PE course.' });
     }
 
-    course1.students.push(userId);
-    course2.students.push(userId);
-
-    // console.log("User", user);
-    
-    await course1.save();
-    await course2.save();
+    // Add student to each course and save
+    for (const course of coursesToAdd) {
+      course.students.push(userId);
+      await course.save();
+    }
 
     await User.findByIdAndUpdate(userId, {
-      $push: { peCourses: { $each: [course1._id, course2._id] } },
+      $push: { peCourses: { $each: courseIds } },
     });
 
     const updatedUser = await User.findById(userId).populate('peCourses');
@@ -98,7 +125,6 @@ export const getAdminPeCourses = asyncHandler(async (req, res) => {
 
     // Fetch users who have enrolled in PE courses
     const users = await User.find(query)
-      .populate('peCourses')
       .select('fullName rollNumber branch section batch peCourses');
 
     if (!users || users.length === 0) {
@@ -107,6 +133,8 @@ export const getAdminPeCourses = asyncHandler(async (req, res) => {
 
     // Transform the data to match the frontend's expected structure
     const transformedData = [];
+
+    console.log(users);
     
     users.forEach(user => {
       if (user.peCourses && user.peCourses.length > 0) {

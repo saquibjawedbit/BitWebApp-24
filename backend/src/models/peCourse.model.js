@@ -22,7 +22,7 @@ const peCourseSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['pe4', 'pe5'],
+      enum: ['pe3', 'pe4', 'pe5'],
       required: true,
     },
     students: [

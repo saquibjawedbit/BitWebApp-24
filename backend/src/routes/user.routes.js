@@ -56,6 +56,7 @@ router.route("/update").patch(
   updateUser1
 );
 router.route("/get-user").get(verifyJWT, getCurrentUser);
+router.route("/current-user").get(verifyJWT, getCurrentUser);
 router
   .route("/pone")
   .patch(

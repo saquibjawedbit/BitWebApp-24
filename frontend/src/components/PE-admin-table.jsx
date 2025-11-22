@@ -38,12 +38,15 @@ const PEAdminTable = () => {
             fullName,
             branch,
             section,
+            pe3: { courseCode: '', courseName: '' },
             pe4: { courseCode: '', courseName: '' },
             pe5: { courseCode: '', courseName: '' },
           };
         }
 
-        if (type.toLowerCase() === 'pe4') {
+        if (type.toLowerCase() === 'pe3') {
+          map[rollNumber].pe3 = { courseCode, courseName };
+        } else if (type.toLowerCase() === 'pe4') {
           map[rollNumber].pe4 = { courseCode, courseName };
         } else if (type.toLowerCase() === 'pe5') {
           map[rollNumber].pe5 = { courseCode, courseName };
@@ -60,6 +63,8 @@ const PEAdminTable = () => {
       'Full Name': student.fullName,
       'Branch': student.branch,
       'Section': student.section,
+      'PE3 Course Code': student.pe3.courseCode,
+      'PE3 Course Name': student.pe3.courseName,
       'PE4 Course Code': student.pe4.courseCode,
       'PE4 Course Name': student.pe4.courseName,
       'PE5 Course Code': student.pe5.courseCode,
@@ -114,10 +119,13 @@ const PEAdminTable = () => {
               <th rowSpan={2} className="px-4 py-2 border">Full Name</th>
               <th rowSpan={2} className="px-4 py-2 border">Branch</th>
               <th rowSpan={2} className="px-4 py-2 border">Section</th>
+              <th colSpan={2} className="px-4 py-2 border text-center">PE3</th>
               <th colSpan={2} className="px-4 py-2 border text-center">PE4</th>
               <th colSpan={2} className="px-4 py-2 border text-center">PE5</th>
             </tr>
             <tr className="bg-gray-100">
+              <th className="px-4 py-2 border">Course Code</th>
+              <th className="px-4 py-2 border">Course Name</th>
               <th className="px-4 py-2 border">Course Code</th>
               <th className="px-4 py-2 border">Course Name</th>
               <th className="px-4 py-2 border">Course Code</th>
@@ -131,6 +139,8 @@ const PEAdminTable = () => {
                 <td className="px-4 py-2 border capitalize">{student.fullName}</td>
                 <td className="px-4 py-2 border capitalize">{student.branch}</td>
                 <td className="px-4 py-2 border">{student.section}</td>
+                <td className="px-4 py-2 border">{student.pe3.courseCode}</td>
+                <td className="px-4 py-2 border">{student.pe3.courseName}</td>
                 <td className="px-4 py-2 border">{student.pe4.courseCode}</td>
                 <td className="px-4 py-2 border">{student.pe4.courseName}</td>
                 <td className="px-4 py-2 border">{student.pe5.courseCode}</td>

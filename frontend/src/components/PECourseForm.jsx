@@ -7,13 +7,16 @@ import Swal from 'sweetalert2';
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function PEForm() {
+  const [selectedPeIII, setSelectedPeIII] = useState("");
   const [selectedPeIV, setSelectedPeIV] = useState("");
   const [selectedPeV, setSelectedPeV] = useState("");
   const [loading, setLoading] = useState(false);
+  const [peCoursesIII, setPeCoursesIII] = useState([]);
   const [peCoursesIV, setPeCoursesIV] = useState([]);
   const [peCoursesV, setPeCoursesV] = useState([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [userHasPeCourse, setUserHasPeCourse] = useState(false);
+  const [userBatch, setUserBatch] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,30 +25,58 @@ export default function PEForm() {
         const response = await axios.get('/api/v1/users/fetchBranch');
         if (response.data.success && response.data.data) {
           const userBranch = response.data.data.toLowerCase();
+          
+          // Fetch user batch
+          const userResponse = await axios.get('/api/v1/users/current-user');
+          const batch = userResponse.data?.data?.batch;
+          setUserBatch(batch);
 
           if (userBranch === "artificial intelligence and machine learning") {
-            setPeCoursesIV([
-              { id: "AI347", name: "Introduction to Distributed System + Lab (IT347)" },
-              { id: "IT445", name: "Internet of Things + Lab (IT445)" },
-              { id: "AI425", name: "Computer Vision + Lab (AI425)" },
-              { id: "IT451", name: "Cloud Computing + Lab (IT451)" },
-            ]);
-            setPeCoursesV([
-              { id: "IT351", name: "Natural Language Processing" },
-              { id: "AI429", name: "Speech Processing" },
-              { id: "IT349", name: "Cryptography & Network Security" },
-            ]);
+            if (batch === 23) {
+              // PE3 courses for batch 2023
+              setPeCoursesIII([
+                { id: "AI315", name: "Advanced Algorithms (AI315)" },
+                { id: "AI317", name: "Information Retreival (AI317)" },
+                { id: "AI319", name: "Introduction to Compiler Design (AI319)" },
+                { id: "AI321", name: "Data Minning (AI321)" },
+              ]);
+    
+            } else {
+              // Batch 2022 and others
+              setPeCoursesIV([
+                { id: "AI347", name: "Introduction to Distributed System + Lab (IT347)" },
+                { id: "IT445", name: "Internet of Things + Lab (IT445)" },
+                { id: "AI425", name: "Computer Vision + Lab (AI425)" },
+                { id: "IT451", name: "Cloud Computing + Lab (IT451)" },
+              ]);
+              setPeCoursesV([
+                { id: "IT351", name: "Natural Language Processing" },
+                { id: "AI429", name: "Speech Processing" },
+                { id: "IT349", name: "Cryptography & Network Security" },
+              ]);
+            }
           } else if (userBranch === "computer science and engineering") {
-            setPeCoursesIV([
-              { id: "CS431", name: "Computer Graphics + Lab (CS431)" },
-              { id: "CS435", name: "Frontend Design + Lab (CS435)" },
-              { id: "CS437", name: "Deep Learning + Lab (CS437)" },
-            ]);
-            setPeCoursesV([
-              { id: "IT445", name: "Internet of Things (IoT) + Lab (IT445)" },
-              { id: "IT331", name: "Image Processing + Lab (IT331)" },
-              { id: "IT347", name: "Cloud Computing + Lab (IT347)" },
-            ]);
+            if (batch === 23) {
+              // PE3 courses for batch 2023
+              setPeCoursesIII([
+                { id: "IT349", name: "Cryptography & Network Security (IT349)" },
+                { id: "IT354", name: "Wireless Sensor Networks (IT354)" },
+                { id: "IT353", name: "Block Chain Technology (IT353)" },
+                { id: "CS351", name: "Nature Inspired Computing (CS351)" },
+              ]);
+            } else {
+              // Batch 2022 and others
+              setPeCoursesIV([
+                { id: "CS431", name: "Computer Graphics + Lab (CS431)" },
+                { id: "CS435", name: "Frontend Design + Lab (CS435)" },
+                { id: "CS437", name: "Deep Learning + Lab (CS437)" },
+              ]);
+              setPeCoursesV([
+                { id: "IT445", name: "Internet of Things (IoT) + Lab (IT445)" },
+                { id: "IT331", name: "Image Processing + Lab (IT331)" },
+                { id: "IT347", name: "Cloud Computing + Lab (IT347)" },
+              ]);
+            }
           } else {
             console.error('No PE course available for your branch:', userBranch);
           }
@@ -73,20 +104,36 @@ export default function PEForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!selectedPeIV || !selectedPeV) {
-      toast.error("Please select both PE IV and PE V courses.");
-      return;
+    if (userBatch === 23) {
+      if (!selectedPeIII) {
+        toast.error("Please select PE courses (PE III).");
+        return;
+      }
+    } else {
+      if (!selectedPeIV || !selectedPeV) {
+        toast.error("Please select both PE IV and PE V courses.");
+        return;
+      }
     }
 
-    Swal.fire({
-      title: 'Are you sure?',
-      html: `
+    const confirmationHtml = userBatch === 23 
+      ? `
+        <div style="text-align: left; padding: 20px;">
+          <p style="font-size: 18px;"><strong>PE III:</strong> ${selectedPeIII}</p>
+        </div>
+        <p style="font-size: 16px; color: #666;">You cannot change this after submission.</p>
+      `
+      : `
         <div style="text-align: left; padding: 20px;">
           <p style="font-size: 18px;"><strong>PE IV:</strong> ${selectedPeIV}</p>
           <p style="font-size: 18px;"><strong>PE V:</strong> ${selectedPeV}</p>
         </div>
         <p style="font-size: 16px; color: #666;">You cannot change these after submission.</p>
-      `,
+      `;
+
+    Swal.fire({
+      title: 'Are you sure?',
+      html: confirmationHtml,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Yes, submit!',
@@ -95,12 +142,19 @@ export default function PEForm() {
       preConfirm: async () => {
         try {
           setLoading(true);
+          
+          const requestBody = userBatch === 23
+            ? {
+                peCourseIIIId: selectedPeIII,
+              }
+            : {
+                peCourseIVId: selectedPeIV,
+                peCourseVId: selectedPeV,
+              };
+
           const response = await axios.post(
             '/api/v1/pe/add-pe',
-            {
-              peCourseIVId: selectedPeIV,
-              peCourseVId: selectedPeV,
-            },
+            requestBody,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
@@ -112,6 +166,7 @@ export default function PEForm() {
           if (response.data.success) {
             toast.success("PE courses added successfully!");
             setIsSubmitted(true);
+            setSelectedPeIII("");
             setSelectedPeIV("");
             setSelectedPeV("");
             Swal.fire('Submitted!', 'Your PE courses have been recorded.', 'success');
@@ -137,45 +192,71 @@ export default function PEForm() {
         <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 mb-6">PE Course Selection Form</h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">PE IV Course</label>
-            <select
-              value={selectedPeIV}
-              onChange={(e) => setSelectedPeIV(e.target.value)}
-              disabled={isDisabled}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black disabled:bg-gray-100"
-              required
-            >
-              <option value="" disabled>Select PE IV Course</option>
-              {peCoursesIV.length > 0 ? (
-                peCoursesIV.map((course, index) => (
-                  <option key={index} value={course.id}>{course.id}: {course.name}</option>
-                ))
-              ) : (
-                <option disabled>No PE IV Courses Available</option>
-              )}
-            </select>
-          </div>
+          {userBatch === 23 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">PE III Course</label>
+              <select
+                value={selectedPeIII}
+                onChange={(e) => setSelectedPeIII(e.target.value)}
+                disabled={isDisabled}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black disabled:bg-gray-100"
+                required
+              >
+                <option value="" disabled>Select PE III Course</option>
+                {peCoursesIII.length > 0 ? (
+                  peCoursesIII.map((course, index) => (
+                    <option key={index} value={course.id}>{course.id}: {course.name}</option>
+                  ))
+                ) : (
+                  <option disabled>No PE III Courses Available</option>
+                )}
+              </select>
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">PE V Course</label>
-            <select
-              value={selectedPeV}
-              onChange={(e) => setSelectedPeV(e.target.value)}
-              disabled={isDisabled}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black disabled:bg-gray-100"
-              required
-            >
-              <option value="" disabled>Select PE V Course</option>
-              {peCoursesV.length > 0 ? (
-                peCoursesV.map((course, index) => (
-                  <option key={index} value={course.id}>{course.id}: {course.name}</option>
-                ))
-              ) : (
-                <option disabled>No PE V Courses Available</option>
-              )}
-            </select>
-          </div>
+          {userBatch !== 23 && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">PE IV Course</label>
+                <select
+                  value={selectedPeIV}
+                  onChange={(e) => setSelectedPeIV(e.target.value)}
+                  disabled={isDisabled}
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black disabled:bg-gray-100"
+                  required
+                >
+                  <option value="" disabled>Select PE IV Course</option>
+                  {peCoursesIV.length > 0 ? (
+                    peCoursesIV.map((course, index) => (
+                      <option key={index} value={course.id}>{course.id}: {course.name}</option>
+                    ))
+                  ) : (
+                    <option disabled>No PE IV Courses Available</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">PE V Course</label>
+                <select
+                  value={selectedPeV}
+                  onChange={(e) => setSelectedPeV(e.target.value)}
+                  disabled={isDisabled}
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black disabled:bg-gray-100"
+                  required
+                >
+                  <option value="" disabled>Select PE V Course</option>
+                  {peCoursesV.length > 0 ? (
+                    peCoursesV.map((course, index) => (
+                      <option key={index} value={course.id}>{course.id}: {course.name}</option>
+                    ))
+                  ) : (
+                    <option disabled>No PE V Courses Available</option>
+                  )}
+                </select>
+              </div>
+            </>
+          )}
 
           <button
             type="submit"
